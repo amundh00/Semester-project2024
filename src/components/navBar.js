@@ -15,7 +15,7 @@ export const renderHeader = () => {
                         </a>
                             <span class="ml-2">1000$</span>
                         </div>
-                        <a href="/sell" class="bg-purple-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-600 transition duration-150">
+                        <a href="/sell" class="bg-[#8F87B8] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-600 transition duration-150">
                             Sell
                         </a>
                         <a href="/logout" class="text-red-500 hover:underline text-sm font-medium">
