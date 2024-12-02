@@ -6,12 +6,13 @@ export const renderHeader = () => {
                 <div class="flex items-center justify-between h-16">
                     <!-- User Info -->
                     <div class="flex items-center space-x-4">
+                        
                         <div class="flex items-center text-gray-800 text-sm">
-                            <span class="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 19a4 4 0 015.656 0M15 12a4 4 0 100-8 4 4 0 000 8zm7 8a4 4 0 00-5.656 0M16 10a6 6 0 110-12 6 6 0 010 12z" />
-                                </svg>
-                            </span>
+                        <a href="/profile" data-link class="text-gray-800 hover:text-gray-600 transition duration-150">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                            </svg>
+                        </a>
                             <span class="ml-2">1000$</span>
                         </div>
                         <a href="/sell" class="bg-purple-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-600 transition duration-150">
