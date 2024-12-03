@@ -1,5 +1,6 @@
 // src/pages/home.js
 import { API_AUCTION_LISTINGS } from '../api/constants.js';
+import { handleLocation } from '../router/index.js';
 
 export const home = () => {
     const div = document.createElement('div');
@@ -25,7 +26,6 @@ export const home = () => {
                 throw new Error('Failed to fetch listings');
             }
             const { data: listings } = await response.json();
-            console.log('Fetched listings:', listings); // Debugging: Log the fetched listings
             displayListings(listings);
             return listings;
         } catch (error) {
@@ -52,24 +52,52 @@ export const home = () => {
                 'hover:shadow-lg', 
                 'transition', 
                 'transform', 
-                'hover:-translate-y-1'
+                'hover:-translate-y-1',
+                'flex', 
+                'flex-col', 
+                'justify-between',
+                'cursor-pointer'
             );
 
             const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : 'default-image.jpg';
-            console.log('Image URL:', imageUrl); // Debugging: Log the image URL
     
             listingDiv.innerHTML = `
-                <img src="${imageUrl}" alt="${listing.title}" class="w-full h-48 object-cover">
-                <div class="p-4">
+                <div class="h-48 w-full overflow-hidden">
+                    <img src="${imageUrl}" alt="${listing.title}" class="w-full h-full object-cover">
+                </div>
+                <div class="p-4 flex-grow">
                     <h2 class="text-lg font-semibold mb-2">${listing.title}</h2>
                     <p class="text-gray-600 mb-4">${listing.description || 'No description available'}</p>
-                    <button class="w-full bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition">
+                </div>
+                <div class="p-4 flex justify-between items-center">
+                    <button class="w-1/2 bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition bid-button" data-id="${listing.id}">
                         Bid on auction!
                     </button>
+                    <span class="text-gray-600">Bids: ${listing._count ? listing._count.bids : 0}</span>
                 </div>
             `;
+
+            // Add event listener to the card
+            listingDiv.addEventListener('click', (event) => {
+                if (!event.target.classList.contains('bid-button')) {
+                    redirectToAuctionDetails(listing.id);
+                }
+            });
+
+            // Add event listener to the button
+            listingDiv.querySelector('.bid-button').addEventListener('click', (event) => {
+                event.stopPropagation();
+                redirectToAuctionDetails(listing.id);
+            });
+
             listingsContainer.appendChild(listingDiv);
         });
+    };
+
+    // Redirect to auction details page
+    const redirectToAuctionDetails = (id) => {
+        history.pushState(null, null, `/auctionDetails?id=${id}`);
+        handleLocation();
     };
 
     // Filter listings based on search input

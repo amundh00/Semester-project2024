@@ -8,3 +8,4 @@ export const API_SOCIAL = import.meta.env.VITE_API_SOCIAL;
 export const API_SOCIAL_POSTS = import.meta.env.VITE_API_SOCIAL_POSTS;
 export const API_SOCIAL_PROFILES = import.meta.env.VITE_API_SOCIAL_PROFILES;
 export const API_AUCTION_LISTINGS = import.meta.env.VITE_API_AUCTION_LISTINGS;
+export const API_AUCTION_LISTING = import.meta.env.VITE_API_AUCTION_LISTING;
