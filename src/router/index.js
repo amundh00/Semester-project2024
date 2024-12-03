@@ -2,12 +2,14 @@
 import { home } from '../pages/home.js';
 import { login } from '../pages/login.js';
 import { profile } from '../pages/profile.js';
+import { register } from '../pages/register.js';
 
 const routes = {
     '/': home,
     '/auctions': () => console.log('auctions page'),
     '/profile': profile,
-    '/login': login
+    '/login': login,
+    '/register': register
 };
 
 export const handleLocation = async () => {
