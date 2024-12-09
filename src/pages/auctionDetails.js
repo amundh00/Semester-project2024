@@ -1,4 +1,4 @@
-import { API_AUCTION_LISTING } from '../api/constants.js';
+import { API_BASE } from '../api/constants.js';
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 Chart.register(...registerables);
@@ -27,7 +27,7 @@ export const auctionDetails = async () => {
     }
 
     try {
-        const response = await fetch(`${API_AUCTION_LISTING}/${auctionId}?_seller=true&_bids=true`);
+        const response = await fetch(`${API_BASE}/auction/listings/${auctionId}?_seller=true&_bids=true`);
         if (!response.ok) {
             throw new Error('Failed to fetch auction details');
         }
@@ -165,65 +165,88 @@ export const auctionDetails = async () => {
             },
         });
 
-        // Handle bidding process
-        const makeBidButton = div.querySelector('#makeBidButton');
-        const bidModal = div.querySelector('#bidModal');
-        const submitBidButton = div.querySelector('#submitBidButton');
-        const closeBidModalButton = div.querySelector('#closeBidModal');
-        const bidAmountInput = div.querySelector('#bidAmount');
+        // Function to update the bids graph dynamically
+        const updateBidsGraph = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/auction/listings/${auctionId}?_bids=true`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch updated bids');
+                }
+                const { data: updatedAuction } = await response.json();
+                const updatedBids = updatedAuction.bids || [];
+                const updatedLabels = updatedBids.map(bid => new Date(bid.created));
+                const updatedData = updatedBids.map(bid => bid.amount);
 
-        if (makeBidButton) {
+                bidsChart.data.labels = updatedLabels;
+                bidsChart.data.datasets[0].data = updatedData;
+                bidsChart.update();
+            } catch (error) {
+                console.error('Error fetching updated bids:', error);
+            }
+        };
+
+        // Update the graph every 30 seconds
+        setInterval(updateBidsGraph, 30000);
+
+        // Add event listener for the "Make Bid" button
+        if (isLoggedIn) {
+            const makeBidButton = document.getElementById('makeBidButton');
+            const bidModal = document.getElementById('bidModal');
+            const closeBidModal = document.getElementById('closeBidModal');
+            const submitBidButton = document.getElementById('submitBidButton');
+            const bidAmountInput = document.getElementById('bidAmount');
+
             makeBidButton.addEventListener('click', () => {
                 bidModal.classList.remove('hidden');
             });
-        }
 
-        closeBidModalButton.addEventListener('click', () => {
-            bidModal.classList.add('hidden');
-        });
+            closeBidModal.addEventListener('click', () => {
+                bidModal.classList.add('hidden');
+            });
 
-        submitBidButton.addEventListener('click', async () => {
-            const bidAmount = parseFloat(bidAmountInput.value);
-            if (isNaN(bidAmount) || bidAmount <= 0) {
-                alert('Please enter a valid bid amount.');
-                return;
-            }
-
-            const accessToken = localStorage.getItem('accessToken');
-            if (!accessToken) {
-                alert('You must be logged in to place a bid.');
-                return;
-            }
-
-            // Send the bid request to the API
-            try {
-                const response = await fetch(`${API_AUCTION_LISTING}/${auctionId}/bids`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'x-api-key': import.meta.env.VITE_API_KEY,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        bidAmount, 
-                        listingId: auctionId,
-                    }),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to place bid');
+            submitBidButton.addEventListener('click', async () => {
+                const bidAmount = parseFloat(bidAmountInput.value);
+                if (isNaN(bidAmount) || bidAmount <= 0) {
+                    alert('Please enter a valid bid amount.');
+                    return;
                 }
 
-                const result = await response.json();
-                console.log('Bid placed successfully:', result);
-                alert('Your bid has been placed successfully!');
-                bidModal.classList.add('hidden'); // Close the modal after placing the bid
-            } catch (error) {
-                console.error('Error placing bid:', error);
-                alert('There was an error placing your bid. Please try again.');
-            }
-        });
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    const API_KEY = import.meta.env.VITE_API_KEY;
+                    if (!accessToken) {
+                        throw new Error('No access token found');
+                    }
 
+                    console.log('Placing bid with amount:', bidAmount); // Debugging: Log the bid amount
+                    console.log('Using access token:', accessToken); // Debugging: Log the access token
+
+                    const response = await fetch(`${API_BASE}/auction/listings/${auctionId}/bids`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                            'X-Noroff-API-Key': API_KEY,
+                        },
+                        body: JSON.stringify({ amount: bidAmount })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to place bid');
+                    }
+
+                    const result = await response.json();
+                    console.log('Bid placed successfully:', result);
+
+                    // Hide the modal and refresh the bids graph
+                    bidModal.classList.add('hidden');
+                    updateBidsGraph();
+                } catch (error) {
+                    console.error('Error placing bid:', error);
+                    alert('Failed to place bid. Please try again.');
+                }
+            });
+        }
     } catch (error) {
         console.error('Error fetching auction details:', error);
         div.innerHTML = '<p class="text-red-500">Failed to load auction details.</p>';
