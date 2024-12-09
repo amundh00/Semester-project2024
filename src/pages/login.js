@@ -42,35 +42,33 @@ export const login = () => {
     return div;
 };
 
-function authenticateUser(email, password) {
+// Function to authenticate user
+const authenticateUser = async (email, password) => {
+    try {
+        const response = await fetch(API_AUTH_LOGIN, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': API_KEY,
+            },
+            body: JSON.stringify({ email, password }),
+        });
 
-    fetch(API_AUTH_LOGIN, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({ email: email, password: password }),
-    })
-    .then(response => {
         if (!response.ok) {
-            return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Authentication failed');
-            });
+            throw new Error('Failed to authenticate');
         }
-        return response.json();
-    })
-    .then(responseData => {
-        const accessToken = responseData.accessToken;
-        const userName = responseData.name;
 
+        const { data } = await response.json();
+        const { accessToken, name } = data;
+
+        // Store access token and user name in local storage
         localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('userName', userName);
+        localStorage.setItem('userName', name);
 
-        window.location.href = '../index.html';
-    })
-    .catch(error => {
-        console.error('Cound not authenticate user:', error);
-        alert("Kunne ikke authentisere login.");
-    });
-}
+        // Redirect to home page or another page
+        window.location.href = '/';
+    } catch (error) {
+        console.error('Error during authentication:', error);
+        alert('Failed to log in. Please check your credentials and try again.');
+    }
+};
