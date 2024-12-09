@@ -32,7 +32,7 @@ export const renderHeader = () => {
                             </svg>
                         </a>
                         <div class="flex items-center text-gray-800 text-sm">
-                            <span class="ml-2">1000$</span>
+                            <span id="userBalance" class="ml-2">1000$</span>
                         </div>
                     </div>
                 </div>
@@ -45,10 +45,11 @@ export const renderHeader = () => {
         header.querySelector('#authButton').addEventListener('click', (event) => {
             event.preventDefault();
             localStorage.removeItem('accessToken');
-            localStorage.removeItem('userName');
             window.location.href = '/login';
         });
     }
+
+    document.body.appendChild(header);
 
     return header;
 };

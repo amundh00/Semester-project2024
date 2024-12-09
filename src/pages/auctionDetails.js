@@ -1,5 +1,18 @@
-// src/pages/auctionDetails.js
 import { API_AUCTION_LISTING } from '../api/constants.js';
+import { Chart, registerables } from 'chart.js';
+import 'chartjs-adapter-date-fns';
+Chart.register(...registerables);
+
+// Function to dynamically load Chart.js
+const loadChartJs = () => {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load Chart.js'));
+        document.head.appendChild(script);
+    });
+};
 
 export const auctionDetails = async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -14,29 +27,203 @@ export const auctionDetails = async () => {
     }
 
     try {
-        const response = await fetch(`${API_AUCTION_LISTING}/${auctionId}`);
+        const response = await fetch(`${API_AUCTION_LISTING}/${auctionId}?_seller=true&_bids=true`);
         if (!response.ok) {
             throw new Error('Failed to fetch auction details');
         }
         const { data: auction } = await response.json();
-        console.log('Fetched auction details:', auction); // Debugging: Log the fetched auction details
+        console.log('Fetched auction:', auction); // Debugging: Log the fetched auction
 
         const title = auction.title || 'No title available';
-        const imageUrl = auction.media && auction.media.length > 0 ? auction.media[0].url : 'default-image.jpg';
+        const media = auction.media || [];
         const description = auction.description || 'No description available';
-        const bidsCount = auction._count && auction._count.bids ? auction._count.bids : 0;
+        const bids = auction.bids || [];
+        const bidsCount = bids.length;
+        const latestBid = bids.length > 0 ? bids[bids.length - 1].amount : 'No bids yet';
+        const seller = auction.seller ? auction.seller.name : 'Unknown seller';
 
+        // Check if the user is logged in
+        const isLoggedIn = !!localStorage.getItem('accessToken');
+
+        // Build the HTML content
         div.innerHTML = `
-            <div class="bg-white p-8 rounded-lg shadow-lg">
-                <h1 class="text-2xl font-semibold mb-4">${title}</h1>
-                <div class="h-64 w-full overflow-hidden mb-4">
-                    <img src="${imageUrl}" alt="${title}" class="w-full h-full object-cover">
+            <div class="bg-gray-100 p-8 rounded-lg shadow-lg">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <!-- Slider Section -->
+                    <div class="relative">
+                        <div class="slider overflow-hidden rounded-md shadow-md">
+                            <div class="slider-track flex transition-transform">
+                                ${media
+                                    .map(
+                                        (img) =>
+                                            `<div class="slider-item min-w-full">
+                                                <img src="${img.url}" alt="${img.alt || 'Auction Image'}" class="w-full h-auto object-cover">
+                                            </div>`
+                                    )
+                                    .join('')}
+                            </div>
+                        </div>
+                        <button class="prev hidden absolute top-1/2 left-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">Prev</button>
+                        <button class="next hidden absolute top-1/2 right-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">Next</button>
+                    </div>
+                    <!-- Details Section -->
+                    <div>
+                        <h1 class="text-2xl font-bold mb-4">${title}</h1>
+                        <p class="text-gray-700 mb-4">${description}</p>
+                        <p class="text-gray-700 mb-4">Seller: ${seller}</p>
+                        <p class="text-gray-700 mb-4">Bids: ${bidsCount}</p>
+                        <p class="text-gray-700 mb-4">Latest Bid: $${latestBid}</p>
+                        ${isLoggedIn ? '<button id="makeBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Make Bid</button>' : ''}
+                        <div class="mb-4">
+                            <canvas id="bidsGraph" class="w-full h-64"></canvas>
+                        </div>
+                    </div>
                 </div>
-                <p class="text-gray-600 mb-4">${description}</p>
-                <p class="text-gray-600 mb-4">Bids: ${bidsCount}</p>
-                <button class="bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition">Place a Bid</button>
+            </div>
+            <!-- Bid Modal -->
+            <div id="bidModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-bold mb-4">Place Your Bid</h2>
+                    <input type="number" id="bidAmount" class="w-full px-4 py-2 border rounded-md mb-4" placeholder="Enter your bid amount">
+                    <button id="submitBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Submit Bid</button>
+                    <button id="closeBidModal" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition">Cancel</button>
+                </div>
             </div>
         `;
+
+        // Append the div to the body or a specific container
+        document.body.appendChild(div);
+
+        // Add slider functionality
+        const slider = div.querySelector('.slider-track');
+        const items = div.querySelectorAll('.slider-item');
+        const prevButton = div.querySelector('.prev');
+        const nextButton = div.querySelector('.next');
+
+        let currentIndex = 0;
+
+        // Show buttons only if there are 2 or more images
+        if (media.length > 1) {
+            prevButton.classList.remove('hidden');
+            nextButton.classList.remove('hidden');
+        }
+
+        const updateSliderPosition = () => {
+            slider.style.transform = `translateX(-${currentIndex * 100}%)`;
+        };
+
+        prevButton.addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + items.length) % items.length;
+            updateSliderPosition();
+        });
+
+        nextButton.addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % items.length;
+            updateSliderPosition();
+        });
+
+        // Load Chart.js and create the bids graph
+        await loadChartJs();
+        const ctx = document.getElementById('bidsGraph').getContext('2d');
+        const labels = bids.map(bid => new Date(bid.created));
+        const data = bids.map(bid => bid.amount);
+
+        const bidsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Bid Amounts',
+                    data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 1,
+                    tension: 0.4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time',
+                        },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Bid Amount',
+                        },
+                    },
+                },
+            },
+        });
+
+        // Handle bidding process
+        const makeBidButton = div.querySelector('#makeBidButton');
+        const bidModal = div.querySelector('#bidModal');
+        const submitBidButton = div.querySelector('#submitBidButton');
+        const closeBidModalButton = div.querySelector('#closeBidModal');
+        const bidAmountInput = div.querySelector('#bidAmount');
+
+        if (makeBidButton) {
+            makeBidButton.addEventListener('click', () => {
+                bidModal.classList.remove('hidden');
+            });
+        }
+
+        closeBidModalButton.addEventListener('click', () => {
+            bidModal.classList.add('hidden');
+        });
+
+        submitBidButton.addEventListener('click', async () => {
+            const bidAmount = parseFloat(bidAmountInput.value);
+            if (isNaN(bidAmount) || bidAmount <= 0) {
+                alert('Please enter a valid bid amount.');
+                return;
+            }
+
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) {
+                alert('You must be logged in to place a bid.');
+                return;
+            }
+
+            // Send the bid request to the API
+            try {
+                const response = await fetch(`${API_AUCTION_LISTING}/${auctionId}/bids`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'x-api-key': import.meta.env.VITE_API_KEY,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        bidAmount, 
+                        listingId: auctionId,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to place bid');
+                }
+
+                const result = await response.json();
+                console.log('Bid placed successfully:', result);
+                alert('Your bid has been placed successfully!');
+                bidModal.classList.add('hidden'); // Close the modal after placing the bid
+            } catch (error) {
+                console.error('Error placing bid:', error);
+                alert('There was an error placing your bid. Please try again.');
+            }
+        });
+
     } catch (error) {
         console.error('Error fetching auction details:', error);
         div.innerHTML = '<p class="text-red-500">Failed to load auction details.</p>';
