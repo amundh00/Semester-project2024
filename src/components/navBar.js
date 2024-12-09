@@ -1,5 +1,8 @@
+import { API_BASE } from '../api/constants.js';
+
 export const renderHeader = () => {
     const accessToken = localStorage.getItem('accessToken');
+    const userName = localStorage.getItem('userName');
     const isLoggedIn = !!accessToken;
 
     const header = document.createElement('header');
@@ -32,7 +35,7 @@ export const renderHeader = () => {
                             </svg>
                         </a>
                         <div class="flex items-center text-gray-800 text-sm">
-                            <span id="userBalance" class="ml-2">1000$</span>
+                            <span id="userBalance" class="ml-2">Loading...</span>
                         </div>
                     </div>
                 </div>
@@ -45,8 +48,34 @@ export const renderHeader = () => {
         header.querySelector('#authButton').addEventListener('click', (event) => {
             event.preventDefault();
             localStorage.removeItem('accessToken');
+            localStorage.removeItem('userName'); // Remove userName as well
             window.location.href = '/login';
         });
+
+        // Fetch user profile info from the new endpoint
+        const apiUrl = `${API_BASE}/auction/profiles/${userName}`;
+
+        fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Noroff-API-Key': import.meta.env.VITE_API_KEY
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch user profile');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('User Profile:', data);
+            const profile = data.data; // Extract the profile data
+            const balance = profile.credits || 0;  // Default to 0 if credits is undefined
+            document.getElementById('userBalance').textContent = `${balance}$`;
+        })
+        .catch(error => console.error('Error fetching user profile:', error));
     }
 
     document.body.appendChild(header);
