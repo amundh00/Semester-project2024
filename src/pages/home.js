@@ -29,9 +29,9 @@ export const home = () => {
 
     let allListings = [];
     let currentPage = 1;
-    const limit = 50; // Show 50 posts per page
+    const limit = 50; // Vis 50 innlegg per side
 
-    // Fetch and display listings
+    // Hent og vis oppføringer
     const fetchListings = async () => {
         let page = 1;
 
@@ -39,23 +39,23 @@ export const home = () => {
             try {
                 const response = await fetch(`${API_AUCTION_LISTINGS}?page=${page}&limit=${limit}`);
                 if (!response.ok) {
-                    throw new Error('Failed to fetch listings');
+                    throw new Error('Klarte ikke å hente oppføringer');
                 }
                 const { data: listings, meta } = await response.json();
                 allListings = allListings.concat(listings);
 
-                // Check if there are more pages to fetch
+                // Sjekk om det er flere sider å hente
                 if (!meta || !meta.nextPage) {
                     break;
                 }
                 page++;
             } catch (error) {
-                console.error('Error fetching listings:', error);
+                console.error('Feil ved henting av oppføringer:', error);
                 break;
             }
         }
 
-        // Check the endsAt property for each listing to determine if it is active
+        // Sjekk endsAt-eiendommen for hver oppføring for å bestemme om den er aktiv
         const activeListings = allListings.filter(listing => new Date(listing.endsAt) > new Date());
 
         const sortedListings = activeListings.sort((a, b) => new Date(b.created) - new Date(a.created));
@@ -65,10 +65,10 @@ export const home = () => {
         return sortedListings;
     };
 
-    // Display listings
+    // Vis oppføringer
     const displayListings = (listings, page) => {
         if (!Array.isArray(listings)) {
-            console.error('Listings is not an array:', listings);
+            console.error('Oppføringer er ikke en array:', listings);
             return;
         }
         listingsContainer.innerHTML = '';
@@ -117,14 +117,14 @@ export const home = () => {
                 </div>
             `;
 
-            // Add event listener to the card
+            // Legg til event listener til kortet
             listingDiv.addEventListener('click', (event) => {
                 if (!event.target.classList.contains('bid-button') && !event.target.classList.contains('login-button')) {
                     redirectToAuctionDetails(listing.id);
                 }
             });
 
-            // Add event listener to the button
+            // Legg til event listener til knappen
             listingDiv.querySelector(`.${buttonAction}`).addEventListener('click', (event) => {
                 event.stopPropagation();
                 if (isLoggedIn) {
@@ -137,12 +137,12 @@ export const home = () => {
             listingsContainer.appendChild(listingDiv);
         });
 
-        // Hide loading and show listings
+        // Skjul lasting og vis oppføringer
         loadingContainer.classList.add('hidden');
         listingsContainer.classList.remove('hidden');
     };
 
-    // Setup pagination
+    // Sett opp paginering
     const setupPagination = (listings) => {
         const totalPages = Math.ceil(listings.length / limit);
         paginationContainer.innerHTML = '';
@@ -159,15 +159,15 @@ export const home = () => {
         }
     };
 
-    // Redirect to auction details page
+    // Omdiriger til auksjonsdetaljer-siden
     const redirectToAuctionDetails = (id) => {
         history.pushState(null, null, `/auctionDetails?id=${id}`);
         handleLocation();
     };
 
-    // Initial fetch of listings
+    // Initial henting av oppføringer
     fetchListings().then(fetchedListings => {
-        // Filter listings based on search input
+        // Filtrer oppføringer basert på søkeinput
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase();
             const filteredListings = fetchedListings.filter(listing => 
