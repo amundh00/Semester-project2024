@@ -4,6 +4,7 @@ import { login } from '../pages/login.js';
 import { profile } from '../pages/profile.js';
 import { register } from '../pages/register.js';
 import { auctionDetails } from '../pages/auctionDetails.js';
+import { makeListing } from '../pages/makeListing.js'; // Ensure this import is correct
 
 const routes = {
     '/': home,
@@ -11,7 +12,8 @@ const routes = {
     '/profile': profile,
     '/login': login,
     '/register': register,
-    '/auctionDetails': auctionDetails
+    '/auctionDetails': auctionDetails,
+    '/makeListing': makeListing, // Added makeListing route
 };
 
 export const handleLocation = async () => {
