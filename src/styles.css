@@ -1,0 +1,14 @@
+/* Add this CSS to your stylesheet */
+.loader {
+    @apply border-8 border-t-8 border-gray-200 rounded-full h-16 w-16 border-t-purple-500;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

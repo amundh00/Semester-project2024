@@ -11,37 +11,72 @@ export const home = () => {
             <div class="mb-4">
                 <input type="text" id="searchInput" placeholder="Search auctions..." class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
             </div>
-            <div id="listings" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+            <div id="loading" class="flex justify-center items-center h-48">
+                <div class="loader border-8 border-t-8 border-gray-200 rounded-full h-16 w-16 border-t-purple-500 animate-spin"></div>
+            </div>
+            <div id="listings" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 hidden"></div>
+            <div id="pagination" class="flex justify-center mt-4"></div>
         </div>
     `;
 
     const searchInput = div.querySelector('#searchInput');
     const listingsContainer = div.querySelector('#listings');
+    const loadingContainer = div.querySelector('#loading');
+    const paginationContainer = div.querySelector('#pagination');
+
+    const accessToken = localStorage.getItem('accessToken');
+    const isLoggedIn = !!accessToken;
+
+    let allListings = [];
+    let currentPage = 1;
+    const limit = 50; // Show 50 posts per page
 
     // Fetch and display listings
     const fetchListings = async () => {
-        try {
-            const response = await fetch(API_AUCTION_LISTINGS);
-            if (!response.ok) {
-                throw new Error('Failed to fetch listings');
+        let page = 1;
+
+        while (true) {
+            try {
+                const response = await fetch(`${API_AUCTION_LISTINGS}?page=${page}&limit=${limit}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch listings');
+                }
+                const { data: listings, meta } = await response.json();
+                allListings = allListings.concat(listings);
+
+                // Check if there are more pages to fetch
+                if (!meta || !meta.nextPage) {
+                    break;
+                }
+                page++;
+            } catch (error) {
+                console.error('Error fetching listings:', error);
+                break;
             }
-            const { data: listings } = await response.json();
-            displayListings(listings);
-            return listings;
-        } catch (error) {
-            console.error('Error fetching listings:', error);
-            return [];
         }
+
+        // Check the endsAt property for each listing to determine if it is active
+        const activeListings = allListings.filter(listing => new Date(listing.endsAt) > new Date());
+
+        const sortedListings = activeListings.sort((a, b) => new Date(b.created) - new Date(a.created));
+
+        displayListings(sortedListings, currentPage);
+        setupPagination(sortedListings);
+        return sortedListings;
     };
 
     // Display listings
-    const displayListings = (listings) => {
+    const displayListings = (listings, page) => {
         if (!Array.isArray(listings)) {
-            console.error('Listings is not an array:', listings); // Debugging: Log if listings is not an array
+            console.error('Listings is not an array:', listings);
             return;
         }
         listingsContainer.innerHTML = '';
-        listings.forEach(listing => {
+        const start = (page - 1) * limit;
+        const end = page * limit;
+        const paginatedListings = listings.slice(start, end);
+
+        paginatedListings.forEach(listing => {
             const listingDiv = document.createElement('div');
             listingDiv.classList.add(
                 'border', 
@@ -59,7 +94,11 @@ export const home = () => {
                 'cursor-pointer'
             );
 
-            const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : 'default-image.jpg';
+            const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : 'placeholder-image.jpg';
+
+            const endsAt = new Date(listing.endsAt).toLocaleString();
+            const buttonText = isLoggedIn ? 'Bid on auction!' : 'Login to bid';
+            const buttonAction = isLoggedIn ? 'bid-button' : 'login-button';
     
             listingDiv.innerHTML = `
                 <div class="h-48 w-full overflow-hidden">
@@ -68,10 +107,11 @@ export const home = () => {
                 <div class="p-4 flex-grow">
                     <h2 class="text-lg font-semibold mb-2">${listing.title}</h2>
                     <p class="text-gray-600 mb-4">${listing.description || 'No description available'}</p>
+                    <p class="text-gray-600 mb-4">Ends at: ${endsAt}</p>
                 </div>
                 <div class="p-4 flex justify-between items-center">
-                    <button class="w-1/2 bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition bid-button" data-id="${listing.id}">
-                        Bid on auction!
+                    <button class="w-1/2 bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition ${buttonAction}" data-id="${listing.id}">
+                        ${buttonText}
                     </button>
                     <span class="text-gray-600">Bids: ${listing._count ? listing._count.bids : 0}</span>
                 </div>
@@ -79,19 +119,44 @@ export const home = () => {
 
             // Add event listener to the card
             listingDiv.addEventListener('click', (event) => {
-                if (!event.target.classList.contains('bid-button')) {
+                if (!event.target.classList.contains('bid-button') && !event.target.classList.contains('login-button')) {
                     redirectToAuctionDetails(listing.id);
                 }
             });
 
             // Add event listener to the button
-            listingDiv.querySelector('.bid-button').addEventListener('click', (event) => {
+            listingDiv.querySelector(`.${buttonAction}`).addEventListener('click', (event) => {
                 event.stopPropagation();
-                redirectToAuctionDetails(listing.id);
+                if (isLoggedIn) {
+                    redirectToAuctionDetails(listing.id);
+                } else {
+                    window.location.href = '/login';
+                }
             });
 
             listingsContainer.appendChild(listingDiv);
         });
+
+        // Hide loading and show listings
+        loadingContainer.classList.add('hidden');
+        listingsContainer.classList.remove('hidden');
+    };
+
+    // Setup pagination
+    const setupPagination = (listings) => {
+        const totalPages = Math.ceil(listings.length / limit);
+        paginationContainer.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.classList.add('mx-1', 'px-3', 'py-1', 'border', 'rounded-md', 'hover:bg-purple-500', 'hover:text-white', 'transition');
+            pageButton.textContent = i;
+            pageButton.addEventListener('click', () => {
+                currentPage = i;
+                displayListings(listings, currentPage);
+            });
+            paginationContainer.appendChild(pageButton);
+        }
     };
 
     // Redirect to auction details page
@@ -100,21 +165,18 @@ export const home = () => {
         handleLocation();
     };
 
-    // Filter listings based on search input
-    searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filteredListings = listings.filter(listing => 
-            listing.title.toLowerCase().includes(searchTerm) ||
-            listing.description.toLowerCase().includes(searchTerm)
-        );
-        displayListings(filteredListings);
-    });
-
     // Initial fetch of listings
-    let listings = [];
     fetchListings().then(fetchedListings => {
-        listings = fetchedListings;
-        displayListings(listings);
+        // Filter listings based on search input
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredListings = fetchedListings.filter(listing => 
+                (listing.title && listing.title.toLowerCase().includes(searchTerm)) ||
+                (listing.description && listing.description.toLowerCase().includes(searchTerm))
+            );
+            displayListings(filteredListings, 1);
+            setupPagination(filteredListings);
+        });
     });
 
     return div;
