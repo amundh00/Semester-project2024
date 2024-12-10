@@ -1,5 +1,5 @@
 // src/pages/register.js
-import { API_AUTH_REGISTER, API_KEY } from '../api/constants.js';
+import { API_AUTH_REGISTER, API_AUTH_LOGIN, API_KEY } from '../api/constants.js';
 
 export const register = () => {
     const div = document.createElement('div');
@@ -34,47 +34,58 @@ export const register = () => {
     `;
 
     // Add event listener for form submission
-    div.querySelector("#registerForm").addEventListener("submit", function(event) {
+    div.querySelector("#registerForm").addEventListener("submit", async function(event) {
         event.preventDefault();
 
         const name = document.getElementById("name").value;
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
 
-        registerUser(name, email, password);
+        try {
+            // Register the user
+            const registerResponse = await fetch(API_AUTH_REGISTER, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Noroff-API-Key': API_KEY,
+                },
+                body: JSON.stringify({ name, email, password }),
+            });
+
+            if (!registerResponse.ok) {
+                throw new Error('Failed to register');
+            }
+
+            const registerData = await registerResponse.json();
+
+            // Log in the user to get the access token
+            const loginResponse = await fetch(API_AUTH_LOGIN, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Noroff-API-Key': API_KEY,
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (!loginResponse.ok) {
+                throw new Error('Failed to log in after registration');
+            }
+
+            const loginData = await loginResponse.json();
+            const { accessToken, name: userName } = loginData.data;
+
+            // Store access token and user name in local storage
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('userName', userName);
+
+            // Redirect to home page or another page
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Error during registration:', error);
+            alert('Failed to register. Please try again.');
+        }
     });
 
     return div;
 };
-
-function registerUser(name, email, password) {
-    fetch(API_AUTH_REGISTER, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({ name: name, email: email, password: password }),
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Registration failed');
-            });
-        }
-        return response.json();
-    })
-    .then(responseData => {
-        const accessToken = responseData.accessToken;
-        const userName = responseData.name;
-
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('userName', userName);
-
-        window.location.href = '../index.html';
-    })
-    .catch(error => {
-        console.error('Could not register user:', error);
-        alert("Kunne ikke registrere bruker.");
-    });
-}

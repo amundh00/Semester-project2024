@@ -74,7 +74,6 @@ export const renderHeader = () => {
             return response.json();
         })
         .then(data => {
-            console.log('User Profile:', data);
             const profile = data.data; // Extract the profile data
             const balance = profile.credits || 0;  // Default to 0 if credits is undefined
             document.getElementById('userBalance').textContent = `${balance}$`;
