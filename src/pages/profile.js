@@ -125,7 +125,7 @@ export const profile = async () => {
                     'cursor-pointer'
                 );
 
-                const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : 'placeholder-image.jpg';
+                const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : null;
 
                 const highestBid = listing.bids && listing.bids.length > 0 
                     ? Math.max(...listing.bids.map((bid) => bid.amount)) 
@@ -133,8 +133,8 @@ export const profile = async () => {
                 const endsAt = new Date(listing.endsAt).toLocaleString();
 
                 listingDiv.innerHTML = `
-                    <div class="h-48 overflow-hidden">
-                        <img src="${imageUrl}" alt="${listing.title}" class="w-full h-full object-cover">
+                    <div class="h-48 overflow-hidden flex items-center justify-center bg-gray-200">
+                        ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" class="w-full h-full object-cover">` : '<span class="text-black">No image</span>'}
                     </div>
                     <div class="p-4 text-center">
                         <h3 class="text-lg font-semibold">${listing.title}</h3>
