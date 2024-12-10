@@ -15,7 +15,7 @@ export const home = () => {
                 <div class="loader border-8 border-t-8 border-gray-200 rounded-full h-16 w-16 border-t-purple-500 animate-spin"></div>
             </div>
             <div id="listings" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 hidden"></div>
-            <div id="pagination" class="flex justify-center mt-4"></div>
+            <div id="pagination" class="flex justify-center mt-4 items-center space-x-4"></div>
         </div>
     `;
 
@@ -29,9 +29,9 @@ export const home = () => {
 
     let allListings = [];
     let currentPage = 1;
-    const limit = 50; // Vis 50 innlegg per side
+    const limit = 50; // Show 50 listings per page
 
-    // Hent og vis oppføringer
+    // Fetch and display listings
     const fetchListings = async () => {
         let page = 1;
 
@@ -39,23 +39,23 @@ export const home = () => {
             try {
                 const response = await fetch(`${API_AUCTION_LISTINGS}?page=${page}&limit=${limit}`);
                 if (!response.ok) {
-                    throw new Error('Klarte ikke å hente oppføringer');
+                    throw new Error('Failed to fetch listings');
                 }
                 const { data: listings, meta } = await response.json();
                 allListings = allListings.concat(listings);
 
-                // Sjekk om det er flere sider å hente
+                // Check if there are more pages to fetch
                 if (!meta || !meta.nextPage) {
                     break;
                 }
                 page++;
             } catch (error) {
-                console.error('Feil ved henting av oppføringer:', error);
+                console.error('Error fetching listings:', error);
                 break;
             }
         }
 
-        // Sjekk endsAt-eiendommen for hver oppføring for å bestemme om den er aktiv
+        // Check the endsAt property for each listing to determine if it is active
         const activeListings = allListings.filter(listing => new Date(listing.endsAt) > new Date());
 
         const sortedListings = activeListings.sort((a, b) => new Date(b.created) - new Date(a.created));
@@ -65,119 +65,100 @@ export const home = () => {
         return sortedListings;
     };
 
-    // Vis oppføringer
     const displayListings = (listings, page) => {
-        if (!Array.isArray(listings)) {
-            console.error('Oppføringer er ikke en array:', listings);
-            return;
-        }
         listingsContainer.innerHTML = '';
+        listingsContainer.classList.remove('hidden');
+        loadingContainer.classList.add('hidden');
+
         const start = (page - 1) * limit;
-        const end = page * limit;
+        const end = start + limit;
         const paginatedListings = listings.slice(start, end);
 
         paginatedListings.forEach(listing => {
             const listingDiv = document.createElement('div');
             listingDiv.classList.add(
-                'border', 
-                'rounded-md', 
-                'shadow-md', 
-                'overflow-hidden', 
-                'bg-white', 
-                'hover:shadow-lg', 
-                'transition', 
-                'transform', 
+                'border',
+                'rounded-md',
+                'shadow-md',
+                'bg-white',
+                'hover:shadow-lg',
+                'transition',
+                'transform',
                 'hover:-translate-y-1',
-                'flex', 
-                'flex-col', 
-                'justify-between',
                 'cursor-pointer'
             );
 
-            const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : 'placeholder-image.jpg';
+            const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : null;
 
+            const highestBid = listing.bids && listing.bids.length > 0 
+                ? Math.max(...listing.bids.map((bid) => bid.amount)) 
+                : 'No bids yet';
             const endsAt = new Date(listing.endsAt).toLocaleString();
-            const buttonText = isLoggedIn ? 'Bid on auction!' : 'Login to bid';
-            const buttonAction = isLoggedIn ? 'bid-button' : 'login-button';
-    
+
             listingDiv.innerHTML = `
-                <div class="h-48 w-full overflow-hidden">
-                    <img src="${imageUrl}" alt="${listing.title}" class="w-full h-full object-cover">
+                <div class="h-48 overflow-hidden flex items-center justify-center bg-gray-200">
+                    ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" class="w-full h-full object-cover">` : '<span class="text-black">No image</span>'}
                 </div>
-                <div class="p-4 flex-grow">
-                    <h2 class="text-lg font-semibold mb-2">${listing.title}</h2>
-                    <p class="text-gray-600 mb-4">${listing.description || 'No description available'}</p>
-                    <p class="text-gray-600 mb-4">Ends at: ${endsAt}</p>
-                </div>
-                <div class="p-4 flex justify-between items-center">
-                    <button class="w-1/2 bg-purple-500 text-white py-2 px-4 rounded-md hover:bg-purple-600 transition ${buttonAction}" data-id="${listing.id}">
-                        ${buttonText}
-                    </button>
-                    <span class="text-gray-600">Bids: ${listing._count ? listing._count.bids : 0}</span>
+                <div class="p-4 text-center">
+                    <h3 class="text-lg font-semibold">${listing.title}</h3>
+                    <p class="text-gray-600 mt-2">Highest bid: <span class="font-bold">${highestBid}</span></p>
+                    <p class="text-gray-600 mt-2">Ends at: <span class="font-bold">${endsAt}</span></p>
                 </div>
             `;
 
-            // Legg til event listener til kortet
-            listingDiv.addEventListener('click', (event) => {
-                if (!event.target.classList.contains('bid-button') && !event.target.classList.contains('login-button')) {
-                    redirectToAuctionDetails(listing.id);
-                }
-            });
-
-            // Legg til event listener til knappen
-            listingDiv.querySelector(`.${buttonAction}`).addEventListener('click', (event) => {
-                event.stopPropagation();
-                if (isLoggedIn) {
-                    redirectToAuctionDetails(listing.id);
-                } else {
-                    window.location.href = '/login';
-                }
+            // Add click event listener to navigate to auction details
+            listingDiv.addEventListener('click', () => {
+                window.location.href = `/auctionDetails?id=${listing.id}`;
             });
 
             listingsContainer.appendChild(listingDiv);
         });
-
-        // Skjul lasting og vis oppføringer
-        loadingContainer.classList.add('hidden');
-        listingsContainer.classList.remove('hidden');
     };
 
-    // Sett opp paginering
     const setupPagination = (listings) => {
-        const totalPages = Math.ceil(listings.length / limit);
         paginationContainer.innerHTML = '';
 
-        for (let i = 1; i <= totalPages; i++) {
-            const pageButton = document.createElement('button');
-            pageButton.classList.add('mx-1', 'px-3', 'py-1', 'border', 'rounded-md', 'hover:bg-purple-500', 'hover:text-white', 'transition');
-            pageButton.textContent = i;
-            pageButton.addEventListener('click', () => {
-                currentPage = i;
+        const totalPages = Math.ceil(listings.length / limit);
+
+        const prevButton = document.createElement('button');
+        prevButton.classList.add('px-4', 'py-2', 'bg-purple-500', 'text-white', 'rounded-md', 'hover:bg-purple-600', 'transition');
+        prevButton.textContent = 'Previous';
+        prevButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
                 displayListings(listings, currentPage);
-            });
-            paginationContainer.appendChild(pageButton);
-        }
-    };
-
-    // Omdiriger til auksjonsdetaljer-siden
-    const redirectToAuctionDetails = (id) => {
-        history.pushState(null, null, `/auctionDetails?id=${id}`);
-        handleLocation();
-    };
-
-    // Initial henting av oppføringer
-    fetchListings().then(fetchedListings => {
-        // Filtrer oppføringer basert på søkeinput
-        searchInput.addEventListener('input', () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const filteredListings = fetchedListings.filter(listing => 
-                (listing.title && listing.title.toLowerCase().includes(searchTerm)) ||
-                (listing.description && listing.description.toLowerCase().includes(searchTerm))
-            );
-            displayListings(filteredListings, 1);
-            setupPagination(filteredListings);
+                updatePageNumber();
+            }
         });
-    });
+
+        const nextButton = document.createElement('button');
+        nextButton.classList.add('px-4', 'py-2', 'bg-purple-500', 'text-white', 'rounded-md', 'hover:bg-purple-600', 'transition');
+        nextButton.textContent = 'Next';
+        nextButton.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayListings(listings, currentPage);
+                updatePageNumber();
+            }
+        });
+
+        const pageNumber = document.createElement('span');
+        pageNumber.id = 'pageNumber';
+        pageNumber.classList.add('text-lg', 'font-semibold');
+        pageNumber.textContent = `Page ${currentPage} of ${totalPages}`;
+
+        paginationContainer.appendChild(prevButton);
+        paginationContainer.appendChild(pageNumber);
+        paginationContainer.appendChild(nextButton);
+    };
+
+    const updatePageNumber = () => {
+        const pageNumber = document.querySelector('#pageNumber');
+        pageNumber.textContent = `Page ${currentPage} of ${totalPages}`;
+    };
+
+    // Initial fetch and display of listings
+    fetchListings();
 
     return div;
 };

@@ -49,7 +49,7 @@ const authenticateUser = async (email, password) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': API_KEY,
+                'X-Noroff-API-Key': API_KEY,
             },
             body: JSON.stringify({ email, password }),
         });
