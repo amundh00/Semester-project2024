@@ -1,5 +1,5 @@
 // src/pages/home.js
-import { API_AUCTION_LISTINGS } from '../api/constants.js';
+import { API_AUCTION_ACTIVE_LISTINGS } from '../api/constants.js';
 
 export const home = () => {
     const div = document.createElement('div');
@@ -39,16 +39,12 @@ export const home = () => {
     const fetchListings = async (searchTerm = '', sortOption = 'newest') => {
         try {
             const baseUrl = searchTerm.trim()
-                ? `${API_AUCTION_LISTINGS}/search`
-                : API_AUCTION_LISTINGS;
+                ? `${API_AUCTION_ACTIVE_LISTINGS}&q=${searchTerm}`
+                : API_AUCTION_ACTIVE_LISTINGS;
 
             const url = new URL(baseUrl);
             url.searchParams.set('_active', 'true');
             url.searchParams.set('_bids', 'true');
-
-            if (searchTerm.trim()) {
-                url.searchParams.set('q', searchTerm);
-            }
 
             const response = await fetch(url.toString(), {
                 headers: {
@@ -83,8 +79,8 @@ export const home = () => {
             });
         } else if (sortOption === 'lowestBid') {
             listings.sort((a, b) => {
-                const lowestBidA = a.bids?.length ? Math.max(...a.bids.map(bid => bid.amount)) : 0;
-                const lowestBidB = b.bids?.length ? Math.max(...b.bids.map(bid => bid.amount)) : 0;
+                const lowestBidA = a.bids?.length ? Math.min(...a.bids.map(bid => bid.amount)) : 0;
+                const lowestBidB = b.bids?.length ? Math.min(...b.bids.map(bid => bid.amount)) : 0;
                 return lowestBidA - lowestBidB;
             });
         } else if (sortOption === 'endingSoon') {
@@ -127,8 +123,8 @@ export const home = () => {
 
             const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : null;
 
-            const highestBid = listing.bids && listing.bids.length > 0
-                ? Math.max(...listing.bids.map((bid) => bid.amount))
+            const highestBid = listing.bids && listing.bids.length > 0 
+                ? Math.max(...listing.bids.map((bid) => bid.amount)) 
                 : 'No bids yet';
             const endsAt = new Date(listing.endsAt).toLocaleString();
 
@@ -167,7 +163,7 @@ export const home = () => {
     });
 
     // Initial fetch and display of listings
-    fetchListings();
+    fetchListings(currentSearchTerm, currentSortOption);
 
     return div;
 };
