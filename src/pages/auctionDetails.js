@@ -63,8 +63,8 @@ export const auctionDetails = async () => {
                                     .join('')}
                             </div>
                         </div>
-                        <button class="prev hidden absolute top-1/2 left-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">Prev</button>
-                        <button class="next hidden absolute top-1/2 right-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">Next</button>
+                        <button class="prev hidden absolute top-1/2 left-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full"><</button>
+                        <button class="next hidden absolute top-1/2 right-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">></button>
                     </div>
                     <!-- Details Section -->
                     <div>

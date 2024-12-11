@@ -18,9 +18,9 @@ export const makeListing = () => {
                 <label for="tags" class="block text-sm font-medium text-gray-700">Tags (comma separated):</label>
                 <input type="text" id="tags" name="tags" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
             </div>
-            <div>
-                <label for="media" class="block text-sm font-medium text-gray-700">Media URL:</label>
-                <input type="url" id="media" name="media" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+            <div id="mediaContainer">
+                <label class="block text-sm font-medium text-gray-700">Media URLs:</label>
+                <input type="url" name="media" class="media-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm" placeholder="Paste image URL here">
             </div>
             <div>
                 <label for="endsAt" class="block text-sm font-medium text-gray-700">Ends At:</label>
@@ -34,6 +34,25 @@ export const makeListing = () => {
         </form>
     `;
 
+    const mediaContainer = div.querySelector('#mediaContainer');
+
+    // Event listener to add new input field dynamically when an existing one is filled
+    mediaContainer.addEventListener('input', (event) => {
+        if (event.target.classList.contains('media-input') && event.target.value.trim() !== '') {
+            const allMediaInputs = mediaContainer.querySelectorAll('.media-input');
+            const lastInput = allMediaInputs[allMediaInputs.length - 1];
+
+            if (lastInput === event.target) {
+                const newInput = document.createElement('input');
+                newInput.type = 'url';
+                newInput.name = 'media';
+                newInput.className = 'media-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm';
+                newInput.placeholder = 'Paste another image URL here';
+                mediaContainer.appendChild(newInput);
+            }
+        }
+    });
+
     // Add event listener for form submission
     div.querySelector("#createListingForm").addEventListener("submit", async function(event) {
         event.preventDefault();
@@ -41,10 +60,12 @@ export const makeListing = () => {
         const title = document.getElementById("title").value;
         const description = document.getElementById("description").value;
         const tags = document.getElementById("tags").value.split(',').map(tag => tag.trim());
-        const mediaUrl = document.getElementById("media").value;
+        const mediaInputs = mediaContainer.querySelectorAll('.media-input');
+        const media = Array.from(mediaInputs)
+            .map(input => input.value.trim())
+            .filter(url => url !== '') // Filter out empty fields
+            .map(url => ({ url, alt: title }));
         const endsAt = new Date(document.getElementById("endsAt").value).toISOString();
-
-        const media = mediaUrl ? [{ url: mediaUrl, alt: title }] : [];
 
         const listingData = {
             title,
