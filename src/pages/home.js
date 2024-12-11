@@ -33,6 +33,7 @@ export const home = () => {
     let currentSortOption = 'newest'; // Default sorting option
     let currentSearchTerm = ''; // Current search term
     let listings = []; // Store listings for sorting
+    let searchTimeout; // Add this variable to fix the error
 
     // Fetch and display listings
     const fetchListings = async (searchTerm = '', sortOption = 'newest') => {
@@ -72,6 +73,8 @@ export const home = () => {
 
     // Sort listings based on selected option
     const sortListings = (sortOption) => {
+        if (!listings || listings.length === 0) return;
+
         if (sortOption === 'highestBid') {
             listings.sort((a, b) => {
                 const highestBidA = a.bids?.length ? Math.max(...a.bids.map(bid => bid.amount)) : 0;
@@ -151,7 +154,7 @@ export const home = () => {
     // Add event listener for search input
     searchInput.addEventListener('input', (e) => {
         currentSearchTerm = e.target.value.trim();
-        clearTimeout(searchTimeout);
+        clearTimeout(searchTimeout); // Use searchTimeout defined above
         searchTimeout = setTimeout(() => {
             fetchListings(currentSearchTerm, currentSortOption);
         }, 300);
@@ -160,7 +163,7 @@ export const home = () => {
     // Add event listener for sort dropdown
     sortSelect.addEventListener('change', (e) => {
         currentSortOption = e.target.value;
-        sortListings(currentSortOption);
+        sortListings(currentSortOption); // Re-sort the current listings
     });
 
     // Initial fetch and display of listings
