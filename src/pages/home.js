@@ -3,26 +3,53 @@ import { API_AUCTION_LISTINGS } from "../api/constants.js";
 // Fetch Listings Function
 export async function fetchListings(searchTerm = "", sortOption = "newest") {
   try {
-    const url = new URL(API_AUCTION_LISTINGS);
+    let url;
 
-    // Add query parameters
-    url.searchParams.append("_active", "true");
-    url.searchParams.append("_bids", "true");
-    url.searchParams.append("_seller", "true");
-    url.searchParams.append("_limit", "100"); // Fetch top 100
-    url.searchParams.append("sort", "created"); // Sort by creation date
-    url.searchParams.append("sortOrder", "desc"); // Descending order for newest
-
-    // Add search term if provided
     if (searchTerm.trim()) {
-      url.searchParams.append("q", searchTerm);
+      // Use the dedicated search endpoint
+      url = new URL(`${API_AUCTION_LISTINGS}/search`);
+      url.searchParams.append("q", searchTerm); // Add search query
+    } else {
+      // Use the standard listings endpoint
+      url = new URL(API_AUCTION_LISTINGS);
+
+      // Add default query parameters
+      url.searchParams.append("_active", "true");
+      url.searchParams.append("_bids", "true");
+      url.searchParams.append("_seller", "true");
+      url.searchParams.append("_limit", "100");
+
+      // Add sorting parameters
+      switch (sortOption) {
+        case "newest":
+          url.searchParams.append("sort", "created");
+          url.searchParams.append("sortOrder", "desc");
+          break;
+        case "highestBid":
+        case "lowestBid":
+          // Sorting by bid will be handled client-side
+          break;
+        case "endingSoon":
+          url.searchParams.append("sort", "endsAt");
+          url.searchParams.append("sortOrder", "asc");
+          break;
+        case "notEndingSoon":
+          url.searchParams.append("sort", "endsAt");
+          url.searchParams.append("sortOrder", "desc");
+          break;
+        default:
+          console.warn(`Unsupported sort option: ${sortOption}. Defaulting to newest.`);
+          url.searchParams.append("sort", "created");
+          url.searchParams.append("sortOrder", "desc");
+      }
     }
 
     console.log("Fetching listings from:", url.toString());
 
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to fetch listings: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch listings: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -44,7 +71,22 @@ export async function displayListings(searchTerm = "", sortOption = "newest") {
 
   try {
     const listingsData = await fetchListings(searchTerm, sortOption);
-    const listings = listingsData.data || listingsData; // Normalize response
+    let listings = listingsData.data || listingsData; // Normalize response
+
+    // Client-side bid sorting
+    if (sortOption === "highestBid" || sortOption === "lowestBid") {
+      listings = listings.sort((a, b) => {
+        const aHighestBid = a.bids && a.bids.length > 0 ? Math.max(...a.bids.map((bid) => bid.amount)) : 0;
+        const bHighestBid = b.bids && b.bids.length > 0 ? Math.max(...b.bids.map((bid) => bid.amount)) : 0;
+
+        if (sortOption === "highestBid") {
+          return bHighestBid - aHighestBid; // Descending order
+        } else if (sortOption === "lowestBid") {
+          return aHighestBid - bHighestBid; // Ascending order
+        }
+        return 0;
+      });
+    }
 
     // Clear the container
     postsContainer.innerHTML = "";
@@ -58,6 +100,7 @@ export async function displayListings(searchTerm = "", sortOption = "newest") {
     postsContainer.className =
       "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 
+    // Populate listings
     listings.forEach((listing) => {
       const highestBid = listing.bids && listing.bids.length > 0
         ? Math.max(...listing.bids.map((bid) => bid.amount))
@@ -145,15 +188,25 @@ export const home = () => {
   // Add event listener for search input
   searchInput.addEventListener("input", (e) => {
     const searchTerm = e.target.value.trim();
-    clearTimeout(window.searchTimeout); // Use a global timeout for debouncing
+
+    // Reset the filter to default when searching
+    sortSelect.value = "newest";
+
+    // Debounce the search
+    clearTimeout(window.searchTimeout);
     window.searchTimeout = setTimeout(() => {
-      displayListings(searchTerm, sortSelect.value);
+      displayListings(searchTerm, "newest"); // Search with default filter
     }, 300);
   });
 
   // Add event listener for sort dropdown
   sortSelect.addEventListener("change", (e) => {
-    displayListings(searchInput.value.trim(), e.target.value);
+    const sortOption = e.target.value;
+
+    // Reset the search bar when filtering
+    searchInput.value = "";
+
+    displayListings("", sortOption); // Filter with no search term
   });
 
   // Append to the DOM and trigger initial display
