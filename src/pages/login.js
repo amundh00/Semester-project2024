@@ -1,4 +1,5 @@
 import { API_AUTH_LOGIN, API_KEY } from '../api/constants.js';
+import { handleLocation } from '../router/index.js'; // Import handleLocation from the router
 
 export const login = () => {
     const div = document.createElement('div');
@@ -66,7 +67,7 @@ const authenticateUser = async (email, password) => {
 
         // Use client-side routing to redirect
         history.pushState(null, null, '/');
-        handleLocation();
+        handleLocation(); // Refresh the current route dynamically
     } catch (error) {
         console.error('Error during authentication:', error);
         alert('Failed to log in. Please check your credentials and try again.');
