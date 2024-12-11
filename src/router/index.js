@@ -6,6 +6,7 @@ import { register } from '../pages/register.js';
 import { auctionDetails } from '../pages/auctionDetails.js';
 import { makeListing } from '../pages/makeListing.js';
 import { editProfile } from '../pages/editProfile.js';
+import { editListing } from '../pages/editListing.js';
 
 // Define routes
 const routes = {
@@ -16,17 +17,18 @@ const routes = {
     '/auctionDetails': auctionDetails,
     '/makeListing': makeListing,
     '/editProfile': editProfile,
+    '/editListing': editListing,
     '/auctions': () => console.log('Auctions page'), // Placeholder route
 };
 
 // Handle location change and load the corresponding page
 export const handleLocation = async () => {
-    const [path, queryString] = window.location.pathname.split('?'); // Separate path and query string
+    const path = window.location.pathname;
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
     const page = routes[path] || routes['/'];
 
-    const params = new URLSearchParams(queryString || '');
     const appContent = document.querySelector('#app-content');
-
     if (!appContent) {
         console.error('Element with ID #app-content not found!');
         return;
@@ -35,7 +37,6 @@ export const handleLocation = async () => {
     appContent.innerHTML = '';
     appContent.appendChild(await page(params)); // Pass query params to the page
 };
-
 
 // Initialize the router
 export const initRouter = () => {
@@ -49,7 +50,6 @@ export const initRouter = () => {
             handleLocation();
         }
     });
-    
 
     // Handle browser back/forward navigation
     window.addEventListener('popstate', handleLocation);

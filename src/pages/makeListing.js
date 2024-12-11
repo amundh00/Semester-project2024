@@ -89,18 +89,23 @@ export const makeListing = () => {
                 body: JSON.stringify(listingData)
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to create listing');
+            // Improved error handling
+            if (!response.ok && response.status !== 201) {
+                const errorText = await response.text();
+                console.error('API Response Error:', errorText);
+                throw new Error(`Failed to create listing: ${errorText}`);
             }
 
             const result = await response.json();
-            console.log('Listing created successfully:', result);
+            console.log('API Response:', result);
 
-            // Redirect to the newly created listing's details page or another page
-            window.location.href = `/auctionDetails?id=${result.data.id}`;
+            // Delay before redirect to ensure the API processes the data
+            setTimeout(() => {
+                window.location.href = `/`;
+            }, 500);
         } catch (error) {
             console.error('Error creating listing:', error);
-            alert('Failed to create listing. Please try again.');
+            alert(`Failed to create listing: ${error.message}`);
         }
     });
 
