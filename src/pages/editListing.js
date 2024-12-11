@@ -73,6 +73,25 @@ export const editListing = async (params) => {
             </form>
         `;
 
+        const mediaContainer = div.querySelector('#mediaContainer');
+
+        // Event listener to add new input field dynamically when an existing one is filled
+        mediaContainer.addEventListener('input', (event) => {
+            if (event.target.classList.contains('media-input') && event.target.value.trim() !== '') {
+                const allMediaInputs = mediaContainer.querySelectorAll('.media-input');
+                const lastInput = allMediaInputs[allMediaInputs.length - 1];
+
+                if (lastInput === event.target) {
+                    const newInput = document.createElement('input');
+                    newInput.type = 'url';
+                    newInput.name = 'media';
+                    newInput.className = 'media-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm';
+                    newInput.placeholder = 'Paste another image URL here';
+                    mediaContainer.appendChild(newInput);
+                }
+            }
+        });
+
         // Add event listener for form submission
         div.querySelector("#editListingForm").addEventListener("submit", async function(event) {
             event.preventDefault();
