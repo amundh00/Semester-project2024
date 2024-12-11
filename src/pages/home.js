@@ -35,41 +35,56 @@ export const home = () => {
     let listings = []; // Store listings for sorting
     let searchTimeout; // Add this variable to fix the error
 
-    // Fetch and display listings
     const fetchListings = async (searchTerm = '', sortOption = 'newest') => {
         try {
+            // Log the access token and search term
+            console.log('Access Token:', accessToken);
+            console.log('Search Term:', searchTerm);
+    
             const baseUrl = searchTerm.trim()
                 ? `${API_AUCTION_LISTINGS}/search`
                 : API_AUCTION_LISTINGS;
-
-            const url = new URL(baseUrl);
+    
+            // Log the base URL before using it
+            console.log('Base URL:', baseUrl);
+    
+            const url = new URL(baseUrl); // This is where the URL is constructed
             url.searchParams.set('_active', 'true');
             url.searchParams.set('_bids', 'true');
-
+    
             if (searchTerm.trim()) {
                 url.searchParams.set('q', searchTerm);
             }
-
+    
+            // Log the complete URL
+            console.log('Constructed URL:', url.toString());
+    
             const response = await fetch(url.toString(), {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json'
                 }
             });
-
+    
+            // Log the HTTP status and check if the response is okay
+            console.log('Response Status:', response.status);
             if (!response.ok) {
-                throw new Error('Failed to fetch listings');
+                throw new Error(`Failed to fetch listings: ${response.statusText}`);
             }
-
+    
             const responseData = await response.json();
+            // Log the fetched data
+            console.log('Response Data:', responseData);
+    
             listings = responseData.data || responseData;
-
+    
             sortListings(sortOption); // Sort and display listings
         } catch (error) {
             console.error('Error fetching listings:', error);
             loadingContainer.innerHTML = `<p class="text-red-500">Failed to load listings: ${error.message}</p>`;
         }
     };
+    
 
     // Sort listings based on selected option
     const sortListings = (sortOption) => {

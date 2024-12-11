@@ -1,9 +1,9 @@
-// src/pages/login.js
 import { API_AUTH_LOGIN, API_KEY } from '../api/constants.js';
+import { handleLocation } from '../router/index.js'; // Import handleLocation from the router
 
 export const login = () => {
     const div = document.createElement('div');
-    div.classList.add('flex', 'items-center', 'justify-center', 'min-h-screen', 'bg-gray-100'); // Center and style the container
+    div.classList.add('flex', 'items-center', 'justify-center', 'min-h-screen', 'bg-gray-100');
 
     div.innerHTML = `
         <div class="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full mt-20">
@@ -24,7 +24,7 @@ export const login = () => {
                 </div>
             </form>
             <div class="mt-4 text-center">
-                <a href="/register" class="text-purple-600 hover:underline">Register</a>
+                <a href="/register" data-link class="text-purple-600 hover:underline">Register</a>
             </div>
         </div>
     `;
@@ -65,8 +65,9 @@ const authenticateUser = async (email, password) => {
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('userName', name);
 
-        // Redirect to home page or another page
-        window.location.href = '/';
+        // Use client-side routing to redirect
+        history.pushState(null, null, '/');
+        handleLocation(); // Refresh the current route dynamically
     } catch (error) {
         console.error('Error during authentication:', error);
         alert('Failed to log in. Please check your credentials and try again.');
