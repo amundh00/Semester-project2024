@@ -1,5 +1,6 @@
 // src/pages/profile.js
 import { API_BASE } from '../api/constants.js';
+import { handleLocation } from '../router/index.js'; // Import handleLocation from the router
 
 export const profile = async () => {
     const accessToken = localStorage.getItem('accessToken');
@@ -177,7 +178,8 @@ export const profile = async () => {
         });
 
         editProfileButton.addEventListener('click', () => {
-            window.location.href = '/editProfile';
+            history.pushState(null, null, '/editProfile');
+            handleLocation();
         });
 
     } catch (error) {

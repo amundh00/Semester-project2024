@@ -1,6 +1,7 @@
 import { API_BASE } from '../api/constants.js';
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import { handleLocation } from '../router/index.js'; // Import handleLocation from the router
 Chart.register(...registerables);
 
 // Function to dynamically load Chart.js
@@ -44,6 +45,7 @@ export const auctionDetails = async () => {
 
         // Check if the user is logged in
         const isLoggedIn = !!localStorage.getItem('accessToken');
+        const currentUser = localStorage.getItem('userName');
 
         // Build the HTML content
         div.innerHTML = `
@@ -51,20 +53,20 @@ export const auctionDetails = async () => {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     <!-- Slider Section -->
                     <div class="relative">
-                        <div class="slider overflow-hidden rounded-md shadow-md">
-                            <div class="slider-track flex transition-transform">
+                        <div class="slider overflow-hidden rounded-md shadow-md h-72 flex items-center justify-center relative">
+                            <div class="slider-track flex transition-transform h-full">
                                 ${media
                                     .map(
                                         (img) =>
-                                            `<div class="slider-item min-w-full">
-                                                <img src="${img.url}" alt="${img.alt || 'Auction Image'}" class="w-full h-auto object-cover">
+                                            `<div class="slider-item flex items-center justify-center min-w-full h-full">
+                                                <img src="${img.url}" alt="${img.alt || 'Auction Image'}" class="max-h-full max-w-full object-contain">
                                             </div>`
                                     )
                                     .join('')}
                             </div>
+                            <button class="prev hidden absolute top-1/2 left-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full"><</button>
+                            <button class="next hidden absolute top-1/2 right-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">></button>
                         </div>
-                        <button class="prev hidden absolute top-1/2 left-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full"><</button>
-                        <button class="next hidden absolute top-1/2 right-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">></button>
                     </div>
                     <!-- Details Section -->
                     <div>
@@ -74,6 +76,7 @@ export const auctionDetails = async () => {
                         <p class="text-gray-700 mb-4">Bids: ${bidsCount}</p>
                         <p class="text-gray-700 mb-4">Latest Bid: $${latestBid}</p>
                         ${isLoggedIn ? '<button id="makeBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Make Bid</button>' : ''}
+                        ${isLoggedIn && currentUser === seller ? '<button id="editListingButton" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">Edit Listing</button>' : ''}
                         <div class="mb-4">
                             <canvas id="bidsGraph" class="w-full h-64"></canvas>
                         </div>
@@ -84,12 +87,23 @@ export const auctionDetails = async () => {
             <div id="bidModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <h2 class="text-xl font-bold mb-4">Place Your Bid</h2>
-                    <input type="number" id="bidAmount" class="w-full px-4 py-2 border rounded-md mb-4" placeholder="Enter your bid amount">
-                    <button id="submitBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Submit Bid</button>
-                    <button id="closeBidModal" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition">Cancel</button>
+                    <input type="number" id="bidAmount" class="border border-gray-300 p-2 rounded-md w-full mb-4" placeholder="Enter your bid amount">
+                    <div class="flex justify-end">
+                        <button id="submitBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Submit Bid</button>
+                        <button id="closeBidModal" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition ml-2">Cancel</button>
+                    </div>
                 </div>
             </div>
         `;
+
+        // Add event listener for the edit listing button
+        if (isLoggedIn && currentUser === seller) {
+            const editListingButton = div.querySelector('#editListingButton');
+            editListingButton.addEventListener('click', () => {
+                history.pushState(null, null, `/editListing?id=${auctionId}`);
+                handleLocation();
+            });
+        }
 
         // Append the div to the body or a specific container
         document.body.appendChild(div);
