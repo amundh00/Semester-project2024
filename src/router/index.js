@@ -1,4 +1,3 @@
-// Import page components
 import { home } from '../pages/home.js';
 import { login } from '../pages/login.js';
 import { profile } from '../pages/profile.js';
@@ -8,7 +7,7 @@ import { makeListing } from '../pages/makeListing.js';
 import { editProfile } from '../pages/editProfile.js';
 import { editListing } from '../pages/editListing.js';
 
-// Define routes
+// Definere ruter
 const routes = {
     '/': home,
     '/login': login,
@@ -18,10 +17,10 @@ const routes = {
     '/makeListing': makeListing,
     '/editProfile': editProfile,
     '/editListing': editListing,
-    '/auctions': () => console.log('Auctions page'), // Placeholder route
+    '/auctions': () => console.log('Auctions page'),
 };
 
-// Handle location change and load the corresponding page
+// Håndtere lokasjon
 export const handleLocation = async () => {
     const path = window.location.pathname;
     const queryString = window.location.search;
@@ -35,14 +34,14 @@ export const handleLocation = async () => {
     }
 
     appContent.innerHTML = '';
-    appContent.appendChild(await page(params)); // Pass query params to the page
+    appContent.appendChild(await page(params)); 
 };
 
-// Initialize the router
+// Initialisere router
 export const initRouter = () => {
-    // Handle click events on links with data-link attribute
+    // Håndtere klik
     document.addEventListener('click', (e) => {
-        const link = e.target.closest('[data-link]'); // Handle nested clickable elements
+        const link = e.target.closest('[data-link]'); // Finn nærmeste element med data-link attributt
         if (link) {
             e.preventDefault();
             const href = link.getAttribute('href');
@@ -51,9 +50,9 @@ export const initRouter = () => {
         }
     });
 
-    // Handle browser back/forward navigation
+    // Håndtere tilbake-knapp
     window.addEventListener('popstate', handleLocation);
 
-    // Load the initial route
+    // Håndtere lokasjon
     handleLocation();
 };

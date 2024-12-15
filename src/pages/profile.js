@@ -1,4 +1,3 @@
-// src/pages/profile.js
 import { API_BASE } from '../api/constants.js';
 
 export const profile = async () => {
@@ -30,7 +29,7 @@ export const profile = async () => {
         }
 
         const profileData = await profileResponse.json();
-        const profile = profileData.data; // Extract the profile data
+        const profile = profileData.data; // hente ut brukerprofilen fra responsen
 
         const avatarUrl = profile.avatar ? profile.avatar.url : 'placeholder-avatar.jpg';
         const bannerUrl = profile.banner ? profile.banner.url : 'placeholder-banner.jpg';
@@ -143,7 +142,7 @@ export const profile = async () => {
                     </div>
                 `;
 
-                // Add click event listener to navigate to auction details
+                // legg til event listener for å navigere til auksjonsdetaljer ved klikk
                 listingDiv.addEventListener('click', () => {
                     window.location.href = `/auctionDetails?id=${listing.id}`;
                 });
@@ -152,7 +151,7 @@ export const profile = async () => {
             });
         };
 
-        // Fetch and display active listings by default
+        // Hent og vis brukerens aktive listeringsannonser
         const activeListings = await fetchListings();
         displayListings(activeListings);
 
@@ -181,7 +180,6 @@ export const profile = async () => {
         });
 
     } catch (error) {
-        console.error('Error fetching user profile or listings:', error);
         div.innerHTML = '<p class="text-red-500">Failed to load profile information or listings.</p>';
     }
 

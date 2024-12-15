@@ -1,4 +1,3 @@
-// src/api/constants.js
 export const API_KEY = import.meta.env.VITE_API_KEY;
 export const API_BASE = import.meta.env.VITE_API_BASE;
 export const API_AUTH_LOGIN = import.meta.env.VITE_API_AUTH_LOGIN;

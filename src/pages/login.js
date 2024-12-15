@@ -1,5 +1,6 @@
 import { API_AUTH_LOGIN, API_KEY } from '../api/constants.js';
-import { handleLocation } from '../router/index.js'; // Import handleLocation from the router
+import { handleLocation } from '../router/index.js';
+import { renderHeader } from '../components/navBar.js';
 
 export const login = () => {
     const div = document.createElement('div');
@@ -17,6 +18,7 @@ export const login = () => {
                     <label for="password" class="block text-sm font-medium text-gray-800">Password:</label>
                     <input type="password" id="password" name="password" required class="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-gray-700">
                 </div>
+                <div id="errorMessage" class="text-red-500 text-sm"></div> <!-- Error message container -->
                 <div>
                     <button type="submit" class="w-full py-2 px-4 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                         Login
@@ -29,21 +31,24 @@ export const login = () => {
         </div>
     `;
 
-    // Add event listener for form submission
-    div.querySelector("#loginForm").addEventListener("submit", function(event) {
+    // legg til event listener for innsending av skjema
+    div.querySelector("#loginForm").addEventListener("submit", async function (event) {
         event.preventDefault();
 
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+        const errorMessage = document.getElementById("errorMessage");
 
-        authenticateUser(email, password);
+        errorMessage.textContent = '';
+
+        authenticateUser(email, password, errorMessage);
     });
 
     return div;
 };
 
-// Function to authenticate user
-const authenticateUser = async (email, password) => {
+// Funksjon for å autentisere bruker
+const authenticateUser = async (email, password, errorMessage) => {
     try {
         const response = await fetch(API_AUTH_LOGIN, {
             method: 'POST',
@@ -55,21 +60,47 @@ const authenticateUser = async (email, password) => {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to authenticate');
+            const errorData = await response.json();
+
+            // Handering av feil ved innlogging
+            if (errorData.errors && errorData.errors.length > 0) {
+                const credentialError = errorData.errors.find(err => err.path && (err.path.includes('email') || err.path.includes('password')));
+                if (credentialError) {
+                    errorMessage.textContent = credentialError.message; // e.g., "Invalid email or password"
+                    return;
+                }
+            }
+
+            // Handere andre feil
+            if (errorData.statusCode === 429) {
+                errorMessage.textContent = "Too many attempts. Please try again later.";
+                return;
+            }
+
+            if (errorData.statusCode >= 500) {
+                errorMessage.textContent = "Server error. Please try again later.";
+                return;
+            }
+
+            throw new Error(errorData.message || 'Failed to authenticate');
         }
 
         const { data } = await response.json();
         const { accessToken, name } = data;
 
-        // Store access token and user name in local storage
+        // lagre token og brukernavn i localStorage
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('userName', name);
 
-        // Use client-side routing to redirect
+        // Oppdater header etter innlogging
+        const header = document.querySelector('header');
+        if (header) header.remove();
+        renderHeader();
+
+        // Omdiriger til hjemmesiden etter innlogging
         history.pushState(null, null, '/');
-        handleLocation(); // Refresh the current route dynamically
+        handleLocation(); // Håndter omdirigering
     } catch (error) {
-        console.error('Error during authentication:', error);
-        alert('Failed to log in. Please check your credentials and try again.');
+        errorMessage.textContent = error.message || 'Failed to authenticate';
     }
 };
