@@ -3,10 +3,11 @@ import { API_BASE } from '../api/constants.js';
 export const renderHeader = () => {
     const accessToken = localStorage.getItem('accessToken');
     const userName = localStorage.getItem('userName');
-    const isLoggedIn = !!accessToken;
+    const isLoggedIn = !!accessToken; // Sjekk om bruker er logget inn
 
     const header = document.createElement('header');
-    header.classList.add('relative', 'z-50'); // Add z-index class to header
+    header.classList.add('relative', 'z-50'); // Legge til Z-index for å sikre at header vises over alt annet
+
     header.innerHTML = `
         <nav class="bg-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,7 +30,7 @@ export const renderHeader = () => {
 
                     <!-- Right Side -->
                     <div class="flex items-center space-x-4 flex-1 justify-end">
-                        ${isLoggedIn ? `<span class="text-gray-800 text-sm">Welcome, ${userName}</span>` : ''}
+                        ${isLoggedIn ? `<span class="text-gray-800 text-sm" id="welcomeMessage">Welcome, ${userName}</span>` : ''}
                         ${isLoggedIn ? `
                         <a href="/profile" data-link class="text-gray-800 hover:text-gray-600 transition duration-150">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
@@ -46,19 +47,19 @@ export const renderHeader = () => {
         </nav>
     `;
 
-    // Add event listener for logout
+    // Legge til Event Listener for logg ut-knappen
     if (isLoggedIn) {
         header.querySelector('#authButton').addEventListener('click', (event) => {
             event.preventDefault();
             const confirmLogout = confirm('Are you sure you want to log out?');
             if (confirmLogout) {
                 localStorage.removeItem('accessToken');
-                localStorage.removeItem('userName'); // Remove userName as well
+                localStorage.removeItem('userName'); 
                 window.location.href = '/login';
             }
         });
 
-        // Fetch user profile info from the new endpoint
+        // Hente user profile data for å vise balanse
         const apiUrl = `${API_BASE}/auction/profiles/${userName}`;
 
         fetch(apiUrl, {
@@ -76,14 +77,26 @@ export const renderHeader = () => {
             return response.json();
         })
         .then(data => {
-            const profile = data.data; // Extract the profile data
-            const balance = profile.credits || 0;  // Default to 0 if credits is undefined
-            document.getElementById('userBalance').textContent = `${balance}$`;
+            const profile = data.data; 
+            const balance = profile.credits || 0;
+            const userBalanceElement = document.getElementById('userBalance');
+
+            // Oppdatere credit balansen i header
+            if (userBalanceElement) {
+                userBalanceElement.textContent = `${balance}$`;
+            }
         })
-        .catch(error => console.error('Error fetching user profile:', error));
+        .catch(error => {
+            const userBalanceElement = document.getElementById('userBalance');
+
+            // Håndtere feil ved henting av balanse
+            if (userBalanceElement) {
+                userBalanceElement.textContent = 'Error fetching credits';
+            }
+        });
     }
 
-    document.body.appendChild(header);
+    document.body.prepend(header); // Legge til header i body-elementet
 
     return header;
 };

@@ -1,10 +1,10 @@
 import { API_BASE } from '../api/constants.js';
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import { handleLocation } from '../router/index.js'; // Import handleLocation from the router
+import { handleLocation } from '../router/index.js';
 Chart.register(...registerables);
 
-// Function to dynamically load Chart.js
+// funksjon for å hente chart data og vise det i en graf
 const loadChartJs = () => {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -33,7 +33,6 @@ export const auctionDetails = async () => {
             throw new Error('Failed to fetch auction details');
         }
         const { data: auction } = await response.json();
-        console.log('Fetched auction:', auction); // Debugging: Log the fetched auction
 
         const title = auction.title || 'No title available';
         const media = auction.media || [];
@@ -42,12 +41,16 @@ export const auctionDetails = async () => {
         const bidsCount = bids.length;
         const latestBid = bids.length > 0 ? bids[bids.length - 1].amount : 'No bids yet';
         const seller = auction.seller ? auction.seller.name : 'Unknown seller';
+        const endsAt = new Date(auction.endsAt);
+        const now = new Date();
 
-        // Check if the user is logged in
+        const isExpired = now > endsAt;
+
+        // sjekke om bruker er logget inn
         const isLoggedIn = !!localStorage.getItem('accessToken');
         const currentUser = localStorage.getItem('userName');
 
-        // Build the HTML content
+        // Bygge HTML elementet
         div.innerHTML = `
             <div class="bg-gray-100 p-8 rounded-lg shadow-lg">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -75,8 +78,10 @@ export const auctionDetails = async () => {
                         <p class="text-gray-700 mb-4">Seller: ${seller}</p>
                         <p class="text-gray-700 mb-4">Bids: ${bidsCount}</p>
                         <p class="text-gray-700 mb-4">Latest Bid: $${latestBid}</p>
-                        ${isLoggedIn ? '<button id="makeBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Make Bid</button>' : ''}
-                        ${isLoggedIn && currentUser === seller ? '<button id="editListingButton" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">Edit Listing</button>' : ''}
+                        <p class="text-gray-700 mb-4">${isExpired ? 'Ended:' : 'Ends At:'} ${endsAt.toLocaleString()}</p>
+                        <p id="countdown" class="text-green-700 font-bold mb-4"></p>
+                        ${!isExpired && isLoggedIn && currentUser !== seller ? '<button id="makeBidButton" class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">Make Bid</button>' : ''}
+                        ${!isExpired && isLoggedIn && currentUser === seller ? '<button id="editListingButton" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">Edit Listing</button>' : ''}
                         <div class="mb-4">
                             <canvas id="bidsGraph" class="w-full h-64"></canvas>
                         </div>
@@ -96,19 +101,35 @@ export const auctionDetails = async () => {
             </div>
         `;
 
-        // Add event listener for the edit listing button
-        if (isLoggedIn && currentUser === seller) {
-            const editListingButton = div.querySelector('#editListingButton');
-            editListingButton.addEventListener('click', () => {
-                history.pushState(null, null, `/editListing?id=${auctionId}`);
-                handleLocation();
-            });
-        }
-
-        // Append the div to the body or a specific container
+        // Legge til Event Listener for å åpne og lukke modalen
         document.body.appendChild(div);
 
-        // Add slider functionality
+        // Countdown funksjonalitet
+        if (!isExpired) {
+            const countdownElement = div.querySelector('#countdown');
+
+            const updateCountdown = () => {
+                const now = new Date();
+                const timeRemaining = endsAt - now;
+
+                if (timeRemaining <= 0) {
+                    countdownElement.textContent = "Auction has ended.";
+                    countdownElement.classList.replace('text-green-700', 'text-red-700');
+                    return clearInterval(countdownInterval);
+                }
+
+                const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+                const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+
+                countdownElement.textContent = `Time Remaining: ${hours}h ${minutes}m ${seconds}s`;
+            };
+
+            const countdownInterval = setInterval(updateCountdown, 1000);
+            updateCountdown();
+        }
+
+        // Slider funksjonalitet
         const slider = div.querySelector('.slider-track');
         const items = div.querySelectorAll('.slider-item');
         const prevButton = div.querySelector('.prev');
@@ -116,7 +137,6 @@ export const auctionDetails = async () => {
 
         let currentIndex = 0;
 
-        // Show buttons only if there are 2 or more images
         if (media.length > 1) {
             prevButton.classList.remove('hidden');
             nextButton.classList.remove('hidden');
@@ -136,13 +156,13 @@ export const auctionDetails = async () => {
             updateSliderPosition();
         });
 
-        // Load Chart.js and create the bids graph
+        // Bygge grafen
         await loadChartJs();
         const ctx = document.getElementById('bidsGraph').getContext('2d');
         const labels = bids.map(bid => new Date(bid.created));
         const data = bids.map(bid => bid.amount);
 
-        const bidsChart = new Chart(ctx, {
+        new Chart(ctx, {
             type: 'line',
             data: {
                 labels,
@@ -179,36 +199,13 @@ export const auctionDetails = async () => {
             },
         });
 
-        // Function to update the bids graph dynamically
-        const updateBidsGraph = async () => {
-            try {
-                const response = await fetch(`${API_BASE}/auction/listings/${auctionId}?_bids=true`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch updated bids');
-                }
-                const { data: updatedAuction } = await response.json();
-                const updatedBids = updatedAuction.bids || [];
-                const updatedLabels = updatedBids.map(bid => new Date(bid.created));
-                const updatedData = updatedBids.map(bid => bid.amount);
-
-                bidsChart.data.labels = updatedLabels;
-                bidsChart.data.datasets[0].data = updatedData;
-                bidsChart.update();
-            } catch (error) {
-                console.error('Error fetching updated bids:', error);
-            }
-        };
-
-        // Update the graph every 30 seconds
-        setInterval(updateBidsGraph, 30000);
-
-        // Add event listener for the "Make Bid" button
-        if (isLoggedIn) {
-            const makeBidButton = document.getElementById('makeBidButton');
-            const bidModal = document.getElementById('bidModal');
-            const closeBidModal = document.getElementById('closeBidModal');
-            const submitBidButton = document.getElementById('submitBidButton');
-            const bidAmountInput = document.getElementById('bidAmount');
+        // Legge til Event Listener for å åpne og lukke modalen
+        if (!isExpired && isLoggedIn && currentUser !== seller) {
+            const makeBidButton = div.querySelector('#makeBidButton');
+            const bidModal = div.querySelector('#bidModal');
+            const closeBidModal = div.querySelector('#closeBidModal');
+            const submitBidButton = div.querySelector('#submitBidButton');
+            const bidAmountInput = div.querySelector('#bidAmount');
 
             makeBidButton.addEventListener('click', () => {
                 bidModal.classList.remove('hidden');
@@ -220,6 +217,7 @@ export const auctionDetails = async () => {
 
             submitBidButton.addEventListener('click', async () => {
                 const bidAmount = parseFloat(bidAmountInput.value);
+
                 if (isNaN(bidAmount) || bidAmount <= 0) {
                     alert('Please enter a valid bid amount.');
                     return;
@@ -227,42 +225,32 @@ export const auctionDetails = async () => {
 
                 try {
                     const accessToken = localStorage.getItem('accessToken');
-                    const API_KEY = import.meta.env.VITE_API_KEY;
-                    if (!accessToken) {
-                        throw new Error('No access token found');
-                    }
-
-                    console.log('Placing bid with amount:', bidAmount); // Debugging: Log the bid amount
-                    console.log('Using access token:', accessToken); // Debugging: Log the access token
-
                     const response = await fetch(`${API_BASE}/auction/listings/${auctionId}/bids`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${accessToken}`,
-                            'X-Noroff-API-Key': API_KEY,
+                            'X-Noroff-API-Key': import.meta.env.VITE_API_KEY,
                         },
-                        body: JSON.stringify({ amount: bidAmount })
+                        body: JSON.stringify({ amount: bidAmount }),
                     });
 
                     if (!response.ok) {
-                        throw new Error('Failed to place bid');
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Failed to place bid.');
                     }
 
                     const result = await response.json();
-                    console.log('Bid placed successfully:', result);
 
-                    // Hide the modal and refresh the bids graph
                     bidModal.classList.add('hidden');
-                    updateBidsGraph();
+                    alert('Bid placed successfully!');
+                    location.reload(); // Oppdater siden for å vise den nye budet
                 } catch (error) {
-                    console.error('Error placing bid:', error);
                     alert('Failed to place bid. Please try again.');
                 }
             });
         }
     } catch (error) {
-        console.error('Error fetching auction details:', error);
         div.innerHTML = '<p class="text-red-500">Failed to load auction details.</p>';
     }
 

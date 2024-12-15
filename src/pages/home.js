@@ -1,25 +1,25 @@
 import { API_AUCTION_LISTINGS } from "../api/constants.js";
 
-// Fetch Listings Function
+// Hent auksjonslister
 export async function fetchListings(searchTerm = "", sortOption = "newest") {
   try {
     let url;
 
     if (searchTerm.trim()) {
-      // Use the dedicated search endpoint
+      // Bruk dedikert søke-endepunkt
       url = new URL(`${API_AUCTION_LISTINGS}/search`);
-      url.searchParams.append("q", searchTerm); // Add search query
+      url.searchParams.append("q", searchTerm); // Legg til søkestreng
     } else {
-      // Use the standard listings endpoint
+      // Bruk standard endepunkt for lister
       url = new URL(API_AUCTION_LISTINGS);
 
-      // Add default query parameters
+      // Legg til standard spørringsparametere
       url.searchParams.append("_active", "true");
       url.searchParams.append("_bids", "true");
       url.searchParams.append("_seller", "true");
       url.searchParams.append("_limit", "100");
 
-      // Add sorting parameters
+      // Legg til sorteringsparametere
       switch (sortOption) {
         case "newest":
           url.searchParams.append("sort", "created");
@@ -27,7 +27,7 @@ export async function fetchListings(searchTerm = "", sortOption = "newest") {
           break;
         case "highestBid":
         case "lowestBid":
-          // Sorting by bid will be handled client-side
+          // Sortering etter bud håndteres klient-side
           break;
         case "endingSoon":
           url.searchParams.append("sort", "endsAt");
@@ -38,57 +38,55 @@ export async function fetchListings(searchTerm = "", sortOption = "newest") {
           url.searchParams.append("sortOrder", "desc");
           break;
         default:
-          console.warn(`Unsupported sort option: ${sortOption}. Defaulting to newest.`);
           url.searchParams.append("sort", "created");
           url.searchParams.append("sortOrder", "desc");
       }
     }
 
-    console.log("Fetching listings from:", url.toString());
+    console.log("Henter lister fra:", url.toString());
 
     const response = await fetch(url);
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to fetch listings: ${response.status} - ${errorText}`);
+      throw new Error(`Kunne ikke hente lister: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error in fetchListings:", error);
     throw error;
   }
 }
 
-// Display Listings Function
+// Vis auksjonslister
 export async function displayListings(searchTerm = "", sortOption = "newest") {
   const postsContainer = document.getElementById("posts-container");
 
   if (!postsContainer) {
-    console.error("Error: posts-container element not found.");
+
     return;
   }
 
   try {
     const listingsData = await fetchListings(searchTerm, sortOption);
-    let listings = listingsData.data || listingsData; // Normalize response
+    let listings = listingsData.data || listingsData; // Normaliser responsen
 
-    // Client-side bid sorting
+    // Klient-side sortering etter bud
     if (sortOption === "highestBid" || sortOption === "lowestBid") {
       listings = listings.sort((a, b) => {
         const aHighestBid = a.bids && a.bids.length > 0 ? Math.max(...a.bids.map((bid) => bid.amount)) : 0;
         const bHighestBid = b.bids && b.bids.length > 0 ? Math.max(...b.bids.map((bid) => bid.amount)) : 0;
 
         if (sortOption === "highestBid") {
-          return bHighestBid - aHighestBid; // Descending order
+          return bHighestBid - aHighestBid; // Synkende rekkefølge
         } else if (sortOption === "lowestBid") {
-          return aHighestBid - bHighestBid; // Ascending order
+          return aHighestBid - bHighestBid; // Stigende rekkefølge
         }
         return 0;
       });
     }
 
-    // Clear the container
+    // Tøm containeren
     postsContainer.innerHTML = "";
 
     if (!listings || listings.length === 0) {
@@ -96,11 +94,11 @@ export async function displayListings(searchTerm = "", sortOption = "newest") {
       return;
     }
 
-    // Update the container's styling for grid layout
+    // Oppdater containerens stil til rutenett
     postsContainer.className =
       "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 
-    // Populate listings
+    // Generer HTML for hver oppføring
     listings.forEach((listing) => {
       const highestBid = listing.bids && listing.bids.length > 0
         ? Math.max(...listing.bids.map((bid) => bid.amount))
@@ -111,7 +109,14 @@ export async function displayListings(searchTerm = "", sortOption = "newest") {
           ? listing.media[0].url
           : null;
 
-      const endsAt = new Date(listing.endsAt).toLocaleString();
+      // Håndter sluttidspunkt
+      const endsAtDate = listing.endsAt ? new Date(listing.endsAt) : null;
+      const currentTime = new Date();
+      const isEnded = endsAtDate && endsAtDate < currentTime;
+
+      const endsAtText = isEnded
+        ? `Ended at: ${endsAtDate.toLocaleString()}`
+        : `Ends at: ${endsAtDate ? endsAtDate.toLocaleString() : "No end date specified"}`;
 
       const listingDiv = document.createElement("div");
       listingDiv.classList.add(
@@ -137,7 +142,7 @@ export async function displayListings(searchTerm = "", sortOption = "newest") {
         <div class="p-4 text-center">
           <h3 class="text-lg font-semibold truncate" title="${listing.title}">${listing.title}</h3>
           <p class="text-gray-600 mt-2">Highest bid: <span class="font-bold">${highestBid}</span></p>
-          <p class="text-gray-600 mt-2">Ends at: <span class="font-bold">${endsAt}</span></p>
+          <p class="text-gray-600 mt-2">${endsAtText}</p>
         </div>
       `;
 
@@ -148,12 +153,11 @@ export async function displayListings(searchTerm = "", sortOption = "newest") {
       postsContainer.appendChild(listingDiv);
     });
   } catch (error) {
-    console.error("Error displaying listings:", error);
     postsContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load listings. Please try again later.</p>`;
   }
 }
 
-// Home Page Component
+// Startside-komponent
 export const home = () => {
   const div = document.createElement("div");
   div.classList.add("p-4");
@@ -185,31 +189,31 @@ export const home = () => {
   const searchInput = div.querySelector("#searchInput");
   const sortSelect = div.querySelector("#sortSelect");
 
-  // Add event listener for search input
+  // Event listener for søkefeltet
   searchInput.addEventListener("input", (e) => {
     const searchTerm = e.target.value.trim();
 
-    // Reset the filter to default when searching
+    // Tilbakestill filteret til standardverdi når du søker
     sortSelect.value = "newest";
 
-    // Debounce the search
+    // Debounce søket
     clearTimeout(window.searchTimeout);
     window.searchTimeout = setTimeout(() => {
-      displayListings(searchTerm, "newest"); // Search with default filter
+      displayListings(searchTerm, "newest"); // Søk med standard filter
     }, 300);
   });
 
-  // Add event listener for sort dropdown
+  // Event listener for sorteringsmenyen
   sortSelect.addEventListener("change", (e) => {
     const sortOption = e.target.value;
 
-    // Reset the search bar when filtering
+    // Tilbakestill søkefeltet når du filtrerer
     searchInput.value = "";
 
-    displayListings("", sortOption); // Filter with no search term
+    displayListings("", sortOption); // Filtrer uten søkeord
   });
 
-  // Append to the DOM and trigger initial display
+  // Legg til DOM-en og vis initiale oppføringer
   document.body.appendChild(div);
   displayListings();
 

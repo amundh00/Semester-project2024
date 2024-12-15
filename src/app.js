@@ -1,8 +1,7 @@
-// src/app.js
 import { renderHeader } from './components/navBar.js';
 import { initRouter } from './router/index.js';
 
-// Setup app structure
+// sett opp HTML-struktur
 document.getElementById('app').innerHTML = `
     <div id="header"></div>
     <main id="app-content"></main>
@@ -11,5 +10,5 @@ document.getElementById('app').innerHTML = `
 // Render header
 document.getElementById('header').appendChild(renderHeader());
 
-// Initialize router
+// initialiser router
 initRouter();
