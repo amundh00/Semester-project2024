@@ -1,6 +1,6 @@
 # Semester-project2024
 
-# Auction App
+# Auction App "Tilslaget"
 
 ## Overview
 
