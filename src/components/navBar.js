@@ -25,7 +25,9 @@ export const renderHeader = () => {
 
                     <!-- App Title -->
                     <div class="text-purple-700 text-lg font-bold flex-1 text-center">
-                        <a href="/" class="hover:underline">TILSLAGET</a>
+                        <a href="/" class="hover:underline">
+                            <img src="/images/tilslaget_logo.png" alt="TILSLAGET Logo" class="h-12 mx-auto">
+                        </a>
                     </div>
 
                     <!-- Right Side -->
