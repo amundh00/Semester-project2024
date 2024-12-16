@@ -78,14 +78,6 @@ Auction App is a web application that allows users to create, view, and bid on a
 - **HTML**: Markup language for structuring the web pages.
 - **CSS**: Styling language for designing the web pages.
 
-## Contributing
-
-Contributions are welcome! Please fork the repository and create a pull request with your changes.
-
-## License
-
-This project is licensed under the MIT License.
-
 ## Acknowledgements
 
 - [Noroff API](https://docs.noroff.dev/docs/v2/auth/login) for providing the backend services.
