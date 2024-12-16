@@ -15,6 +15,50 @@ const loadChartJs = () => {
     });
 };
 
+// funksjon for å bygge grafen
+const renderChart = (bids) => {
+    // Sort bids by creation date in ascending order
+    bids.sort((a, b) => new Date(a.created) - new Date(b.created));
+
+    const ctx = document.getElementById('bidsGraph').getContext('2d');
+    const labels = bids.map(bid => new Date(bid.created).toLocaleString());
+    const data = bids.map(bid => bid.amount);
+
+    new Chart(ctx, {
+        type: 'bar', 
+        data: {
+            labels,
+            datasets: [{
+                label: 'Bid Amounts',
+                data,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Time',
+                    },
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Bid Amount',
+                    },
+                },
+            },
+        },
+    });
+};
+
 export const auctionDetails = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const auctionId = urlParams.get('id');
@@ -70,6 +114,24 @@ export const auctionDetails = async () => {
                             <button class="prev hidden absolute top-1/2 left-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full"><</button>
                             <button class="next hidden absolute top-1/2 right-0 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full">></button>
                         </div>
+                        <!-- Bid History Section -->
+                        <div id="bidListContainer" class="mt-4">
+                            <h2 class="text-xl font-bold mb-2">Bid History</h2>
+                            <ul class="bg-white p-4 rounded-lg shadow-md">
+                                ${bids.length > 0
+                                    ? bids
+                                        .sort((a, b) => new Date(b.created) - new Date(a.created))
+                                        .map(bid => `
+                                            <li class="py-3 flex justify-between items-center">
+                                                <span class="font-medium text-gray-800">${bid.bidder.name}</span>
+                                                <span class="text-green-600 font-bold">$${bid.amount.toFixed(2)}</span>
+                                                <span class="text-gray-500 text-sm">${new Date(bid.created).toLocaleString()}</span>
+                                            </li>
+                                        `).join('')
+                                    : '<li class="text-gray-500">No bids yet</li>'
+                                }
+                            </ul>
+                        </div>
                     </div>
                     <!-- Details Section -->
                     <div>
@@ -101,7 +163,7 @@ export const auctionDetails = async () => {
             </div>
         `;
 
-        // Legge til Event Listener for å åpne og lukke modalen
+        // Append the div to the body
         document.body.appendChild(div);
 
         // Countdown funksjonalitet
@@ -158,46 +220,7 @@ export const auctionDetails = async () => {
 
         // Bygge grafen
         await loadChartJs();
-        const ctx = document.getElementById('bidsGraph').getContext('2d');
-        const labels = bids.map(bid => new Date(bid.created));
-        const data = bids.map(bid => bid.amount);
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Bid Amounts',
-                    data,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderWidth: 1,
-                    tension: 0.4,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'minute',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Time',
-                        },
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Bid Amount',
-                        },
-                    },
-                },
-            },
-        });
+        renderChart(bids);
 
         // Legge til Event Listener for å åpne og lukke modalen
         if (!isExpired && isLoggedIn && currentUser !== seller) {
@@ -250,7 +273,19 @@ export const auctionDetails = async () => {
                 }
             });
         }
+
+        // Add event listener for the edit listing button
+        if (isLoggedIn && currentUser === seller) {
+            const editListingButton = div.querySelector('#editListingButton');
+            if (editListingButton) {
+                editListingButton.addEventListener('click', () => {
+                    history.pushState(null, null, `/editListing?id=${auctionId}`);
+                    handleLocation();
+                });
+            }
+        }
     } catch (error) {
+        console.error('Error fetching auction details:', error);
         div.innerHTML = '<p class="text-red-500">Failed to load auction details.</p>';
     }
 
