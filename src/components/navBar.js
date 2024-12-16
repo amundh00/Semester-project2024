@@ -15,7 +15,7 @@ export const renderHeader = () => {
                     <!-- Left Side -->
                     <div class="flex items-center space-x-4 flex-1">
                         ${isLoggedIn ? `
-                        <a href="/makeListing" data-link class="bg-[#8F87B8] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-600 transition duration-150">
+                        <a href="/makeListing" data-link class="bg-[#8F87B8] text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-600 transition duration-150">
                             Sell
                         </a>` : ''}
                         <a href="${isLoggedIn ? '#' : '/login'}" id="authButton" class="${isLoggedIn ? 'text-red-500' : 'text-green-500'} hover:underline text-sm font-medium">
