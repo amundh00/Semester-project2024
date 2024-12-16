@@ -32,7 +32,7 @@ export const renderHeader = () => {
                     <div class="flex items-center space-x-4 flex-1 justify-end">
                         ${isLoggedIn ? `<span class="text-gray-800 text-sm" id="welcomeMessage">Welcome, ${userName}</span>` : ''}
                         ${isLoggedIn ? `
-                        <a href="/profile" data-link class="text-gray-800 hover:text-gray-600 transition duration-150">
+                        <a href="/profile" data-link class="text-gray-800 hover:text-gray-600 transition duration-150" aria-label="Profile">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-8 h-8">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                             </svg>
